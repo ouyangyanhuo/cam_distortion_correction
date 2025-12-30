@@ -207,16 +207,36 @@ def create_ui():
         
         def perform_calibration(model):
             import requests
+            import json
             # 使用Flask API进行标定，支持模型选择
             try:
                 response = requests.post('http://127.0.0.1:5000/api/calibrate', 
                                         json={'model': model}, 
                                         timeout=30)
-                if response.status_code == 200:
+                
+                # 检查响应状态码
+                if response.status_code != 200:
+                    return f"标定API请求失败: {response.status_code} - {response.text}"
+                
+                # 检查响应内容类型
+                content_type = response.headers.get('content-type', '')
+                if 'application/json' not in content_type:
+                    return f"API返回了非JSON响应，内容类型: {content_type}, 内容: {response.text[:200]}..."
+                
+                # 尝试解析JSON响应
+                try:
                     result = response.json()
-                    return result['message']
+                except json.JSONDecodeError as e:
+                    return f"无法解析API响应JSON: {str(e)}, 响应内容: {response.text[:200]}..."
+                
+                # 检查响应状态
+                if result.get('status') == 'error':
+                    return f"标定失败: {result.get('message', '未知错误')}"
                 else:
-                    return f"标定API请求失败: {response.status_code}"
+                    return result.get('message', '标定完成')
+                    
+            except requests.exceptions.ConnectionError:
+                return "无法连接到后端API服务，请确保Flask服务器正在运行。"
             except Exception as e:
                 return f"标定API请求异常: {str(e)}"
         

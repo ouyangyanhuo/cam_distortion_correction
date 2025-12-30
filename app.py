@@ -95,10 +95,23 @@ def capture_image():
 @app.route('/api/calibrate', methods=['POST'])
 def calibrate():
     """执行标定"""
-    data = request.get_json()
-    model = data.get('model', 'pinhole')  # 默认使用pinhole模型
-    result = calibrator.calibrate_camera(model=model)
-    return jsonify({'status': 'success', 'message': result})
+    try:
+        print(f"[DEBUG API] 接收到标定请求")
+        data = request.get_json()
+        if data is None:
+            print(f"[ERROR API] 无法解析JSON数据")
+            return jsonify({'status': 'error', 'message': '无法解析JSON数据'}), 400
+        model = data.get('model', 'pinhole')  # 默认使用pinhole模型
+        print(f"[DEBUG API] 使用模型: {model}")
+        result = calibrator.calibrate_camera(model=model)
+        print(f"[DEBUG API] 标定完成，结果: {result}")
+        return jsonify({'status': 'success', 'message': result})
+    except Exception as e:
+        import traceback
+        error_msg = f"标定过程中发生异常: {str(e)}"
+        print(f"[ERROR API] {error_msg}")
+        print(f"[ERROR API] 异常详情:\n{traceback.format_exc()}")
+        return jsonify({'status': 'error', 'message': error_msg}), 500
 
 @app.route('/api/generate_cpp', methods=['GET'])
 def generate_cpp():
@@ -109,10 +122,22 @@ def generate_cpp():
 @app.route('/api/board_image')
 def get_board_image():
     """获取标定板图像"""
-    board_image = calibrator.get_board_image()
-    ret, buffer = cv2.imencode('.png', cv2.cvtColor(board_image, cv2.COLOR_RGB2BGR))
-    if ret:
-        return Response(buffer.tobytes(), mimetype='image/png')
+    try:
+        board_image = calibrator.get_board_image()
+        if board_image is None:
+            print(f"[ERROR API] 无法生成标定板图像")
+            return "No image", 404
+        ret, buffer = cv2.imencode('.png', cv2.cvtColor(board_image, cv2.COLOR_RGB2BGR))
+        if ret:
+            return Response(buffer.tobytes(), mimetype='image/png')
+        else:
+            print(f"[ERROR API] 无法编码标定板图像")
+            return "Encode failed", 500
+    except Exception as e:
+        import traceback
+        print(f"[ERROR API] 获取标定板图像时发生异常: {str(e)}")
+        print(f"[ERROR API] 异常详情:\n{traceback.format_exc()}")
+        return "Internal server error", 500
 
 @app.route('/api/set_board_type', methods=['POST'])
 def set_board_type():
@@ -131,12 +156,25 @@ def set_board_type():
 @app.route('/api/save_calibration', methods=['POST'])
 def save_calibration():
     """保存标定结果"""
-    data = request.get_json()
-    out_path = data.get('out_path', 'calibration.yaml')
-    model = data.get('model', 'pinhole')
-    
-    result = calibrator.save_calibration(out_path, model)
-    return jsonify({'status': 'success', 'message': result})
+    try:
+        print(f"[DEBUG API] 接收到保存标定结果请求")
+        data = request.get_json()
+        if data is None:
+            print(f"[ERROR API] 无法解析JSON数据")
+            return jsonify({'status': 'error', 'message': '无法解析JSON数据'}), 400
+        out_path = data.get('out_path', 'calibration.yaml')
+        model = data.get('model', 'pinhole')
+        print(f"[DEBUG API] 保存路径: {out_path}, 模型: {model}")
+        
+        result = calibrator.save_calibration(out_path, model)
+        print(f"[DEBUG API] 保存完成，结果: {result}")
+        return jsonify({'status': 'success', 'message': result})
+    except Exception as e:
+        import traceback
+        error_msg = f"保存标定结果时发生异常: {str(e)}"
+        print(f"[ERROR API] {error_msg}")
+        print(f"[ERROR API] 异常详情:\n{traceback.format_exc()}")
+        return jsonify({'status': 'error', 'message': error_msg}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)

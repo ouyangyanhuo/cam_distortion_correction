@@ -49,8 +49,17 @@ class CameraCalibrator:
     
     def save_calibration(self, out_path, model="pinhole", extra=None):
         """保存标定结果到YAML文件"""
+        print(f"[DEBUG] 开始保存标定结果到: {out_path}")
+        print(f"[DEBUG] 模型类型: {model}")
+        
         if self.camera_properties['calibration_matrix'] is None or self.camera_properties['distortion_coeffs'] is None:
+            print(f"[DEBUG] 没有标定数据可保存")
             return "没有标定数据可保存"
+        
+        print(f"[DEBUG] 标定矩阵信息:")
+        print(f"[DEBUG]   - 内参矩阵K:\n{self.camera_properties['calibration_matrix']}")
+        print(f"[DEBUG]   - 畸变系数D:\n{self.camera_properties['distortion_coeffs'].flatten()}")
+        print(f"[DEBUG]   - 图像尺寸: {self.camera_properties['resolution_width']}x{self.camera_properties['resolution_height']}")
         
         fs = cv2.FileStorage(out_path, cv2.FILE_STORAGE_WRITE)
         fs.write("image_width", int(self.camera_properties['resolution_width']))
@@ -59,12 +68,15 @@ class CameraCalibrator:
         fs.write("K", self.camera_properties['calibration_matrix'])
         fs.write("D", self.camera_properties['distortion_coeffs'])
         if extra:
+            print(f"[DEBUG] 保存额外信息:")
             for k, v in extra.items():
+                print(f"[DEBUG]   - {k}: {v}")
                 if isinstance(v, (int, float, str)):
                     fs.write(k, v)
                 else:
                     fs.write(k, np.array(v))
         fs.release()
+        print(f"[DEBUG] 标定结果已保存到: {out_path}")
         return f"标定结果已保存到: {out_path}"
         
     def get_camera_list(self):
@@ -81,19 +93,26 @@ class CameraCalibrator:
     
     def detect_chessboard(self, gray, pattern_size):
         """检测棋盘格角点"""
+        print(f"[DEBUG] 开始检测棋盘格角点，模式尺寸: {pattern_size}")
         corners = None
         ok = False
         if hasattr(cv2, "findChessboardCornersSB"):
+            print(f"[DEBUG] 使用 findChessboardCornersSB 方法")
             ok, corners = cv2.findChessboardCornersSB(gray, pattern_size, flags=cv2.CALIB_CB_NORMALIZE_IMAGE)
         else:
+            print(f"[DEBUG] 使用 findChessboardCorners 方法")
             ok, corners = cv2.findChessboardCorners(
                 gray, pattern_size,
                 flags=cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE
             )
+        print(f"[DEBUG] 初始检测结果: ok={ok}, corners is not None: {corners is not None}")
         if not ok:
+            print(f"[DEBUG] 棋盘格检测失败")
             return None
+        print(f"[DEBUG] 检测到 {len(corners)} 个初始角点")
         term = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 60, 1e-6)
         corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), term)
+        print(f"[DEBUG] 亚像素优化后角点数量: {len(corners) if corners is not None else 0}")
         return corners
     
     def detect_charuco(self, gray):
@@ -102,26 +121,39 @@ class CameraCalibrator:
         - OpenCV 4.11+：CharucoDetector.detectBoard()（interpolateCornersCharuco 已移除）
         - 旧版 OpenCV：detectMarkers + interpolateCornersCharuco
         """
+        # print(f"[DEBUG] 开始检测 ChArUco 角点")
         # 新 API
         if hasattr(cv2.aruco, "CharucoDetector"):
+            # print(f"[DEBUG] 使用新 API: CharucoDetector")
             detector = cv2.aruco.CharucoDetector(self.board)
             charuco_corners, charuco_ids, marker_corners, marker_ids = detector.detectBoard(gray)
+            # print(f"[DEBUG] 新 API 检测结果: charuco_corners={charuco_corners is not None}, charuco_ids={charuco_ids is not None}")
+            # if charuco_ids is not None:
+            #     print(f"[DEBUG] 检测到 {len(charuco_ids)} 个 ChArUco ID")
             if charuco_ids is None or len(charuco_ids) < 6:
+                # print(f"[DEBUG] ChArUco 检测失败: ID 数量不足")
                 return None, None
             return charuco_corners, charuco_ids
 
         # 旧 API
+        print(f"[DEBUG] 使用旧 API: detectMarkers + interpolateCornersCharuco")
         if hasattr(cv2.aruco, "ArucoDetector"):
             detector = cv2.aruco.ArucoDetector(self.dictionary)
             corners, ids, _ = detector.detectMarkers(gray)
         else:
             corners, ids, _ = cv2.aruco.detectMarkers(gray, self.dictionary)
+        
+        print(f"[DEBUG] ArUco 标记检测结果: corners={corners is not None}, ids={ids is not None}")
+        # if ids is not None:
+        #     print(f"[DEBUG] 检测到 {len(ids)} 个 ArUco ID")
 
         if ids is None or len(ids) < 4:
+            print(f"[DEBUG] ArUco 标记数量不足，无法进行 ChArUco 插值")
             return None, None
 
         if not hasattr(cv2.aruco, "interpolateCornersCharuco"):
             # 极少数中间版本可能两者都没有
+            print(f"[DEBUG] OpenCV 版本不支持 interpolateCornersCharuco")
             raise RuntimeError("当前 OpenCV aruco API 不完整：缺少 CharucoDetector 和 interpolateCornersCharuco。")
 
         ok, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(
@@ -130,7 +162,12 @@ class CameraCalibrator:
             image=gray,
             board=self.board
         )
+        print(f"[DEBUG] interpolateCornersCharuco 结果: ok={ok}, charuco_corners={charuco_corners is not None}, charuco_ids={charuco_ids is not None}")
+        if charuco_ids is not None:
+            print(f"[DEBUG] 插值后 ChArUco ID 数量: {len(charuco_ids)}")
+        
         if (not ok) or (charuco_ids is None) or (len(charuco_ids) < 6):
+            print(f"[DEBUG] ChArUco 插值失败或ID数量不足")
             return None, None
         return charuco_corners, charuco_ids
     
@@ -227,31 +264,40 @@ class CameraCalibrator:
     
     def capture_calibration_image(self):
         """捕获用于标定的图像"""
+        print(f"[DEBUG] 开始捕获标定图像，当前标定板类型: {self.board_type}")
         if self.cap is not None and self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                print(f"[DEBUG] 成功读取图像，图像尺寸: {frame.shape}")
                 
                 if self.board_type == "chessboard":
+                    print(f"[DEBUG] 检测棋盘格角点，尺寸: {self.chessboard_size}")
                     # 检测棋盘格角点
                     corners = self.detect_chessboard(gray, self.chessboard_size)
                     if corners is not None and len(corners) >= 4:
+                        print(f"[DEBUG] 检测到 {len(corners)} 个棋盘格角点")
                         # 为棋盘格创建对象点
                         objp = np.zeros((self.chessboard_size[0] * self.chessboard_size[1], 3), np.float32)
                         objp[:, :2] = np.mgrid[0:self.chessboard_size[0], 0:self.chessboard_size[1]].T.reshape(-1, 2)
                         objp *= float(self.square_size)
+                        print(f"[DEBUG] 创建了 {len(objp)} 个3D对象点")
                         
                         # 添加到标定数据
                         self.objpoints.append(objp)
                         self.imgpoints.append(corners)
                         self.calibration_images.append(gray)
+                        print(f"[DEBUG] 已添加标定数据，当前共有 {len(self.calibration_images)} 张图像")
                         return f"Captured chessboard calibration image. Total: {len(self.calibration_images)}"
                     else:
+                        print(f"[DEBUG] 未能检测到足够的棋盘格角点，检测到: {len(corners) if corners is not None else 0} 个")
                         return "Could not detect enough chessboard corners. Please adjust the board position."
                 else:  # charuco
+                    print(f"[DEBUG] 检测 ChArUco 角点")
                     # 检测 ChArUco 角点
                     charuco_corners, charuco_ids = self.detect_charuco(gray)
                     if charuco_corners is not None and charuco_ids is not None and len(charuco_corners) >= 6:
+                        print(f"[DEBUG] 检测到 {len(charuco_corners)} 个 ChArUco 角点, {len(charuco_ids)} 个 ID")
                         # 获取3D棋盘格角点
                         chess_corners_3d = self.board.getChessboardCorners()
                         
@@ -265,12 +311,16 @@ class CameraCalibrator:
                         self.objpoints.append(obj)
                         self.imgpoints.append(imgp)
                         self.calibration_images.append(gray)
+                        print(f"[DEBUG] 已添加标定数据，当前共有 {len(self.calibration_images)} 张图像")
                         return f"Captured charuco calibration image. Total: {len(self.calibration_images)}"
                     else:
+                        print(f"[DEBUG] 未能检测到足够的 ChArUco 点，检测到角点: {len(charuco_corners) if charuco_corners is not None else 0}, ID: {len(charuco_ids) if charuco_ids is not None else 0}")
                         return "Could not detect enough charuco points. Please adjust the board position."
             else:
+                print(f"[DEBUG] 无法读取摄像头帧")
                 return "Failed to capture image"
         else:
+            print(f"[DEBUG] 摄像头未打开")
             return "Camera is not opened"
     
     def calibrate_camera(self, model="pinhole"):
@@ -279,7 +329,9 @@ class CameraCalibrator:
         Args:
             model (str): 相机模型, 'pinhole' 或 'fisheye'
         """
-        print(f"开始{model}模型标定过程，当前有 {len(self.calibration_images)} 张已捕获的标定图像。")
+        print(f"[DEBUG] 开始{model}模型标定过程")
+        print(f"[DEBUG] 当前已捕获 {len(self.calibration_images)} 张标定图像")
+        print(f"[DEBUG] 当前已收集 {len(self.objpoints)} 组3D-2D点对")
         
         if len(self.calibration_images) < 3:
             error_msg = f"标定失败: 图像数量不足。当前有 {len(self.calibration_images)} 张图像，需要至少3张。"
@@ -292,25 +344,45 @@ class CameraCalibrator:
             print(error_msg)
             return error_msg
         
-        print(f"找到 {len(self.objpoints)} 张有效标定图像，开始执行标定...")
+        print(f"[DEBUG] 找到 {len(self.objpoints)} 张有效标定图像，开始执行标定...")
         
         # 检查图像尺寸
         h, w = self.calibration_images[0].shape
         image_size = (w, h)
+        print(f"[DEBUG] 图像尺寸: {image_size}")
+        
+        # 检查数据质量
+        print(f"[DEBUG] 数据质量检查:")
+        for i, (obj, img) in enumerate(zip(self.objpoints, self.imgpoints)):
+            print(f"[DEBUG]   - 第{i+1}组数据: 3D点形状={obj.shape}, 2D点形状={img.shape}")
+            if obj.size == 0 or img.size == 0:
+                print(f"[DEBUG]   - 警告: 第{i+1}组数据为空!")
+            # 检查数据类型
+            print(f"[DEBUG]   - 第{i+1}组数据类型: 3D点={obj.dtype}, 2D点={img.dtype}")
+        
+        print(f"[DEBUG] 标定前数据验证:")
+        print(f"[DEBUG]   - 图像尺寸: {image_size}")
+        print(f"[DEBUG]   - 3D点数量: {len(self.objpoints)} 组")
+        print(f"[DEBUG]   - 2D点数量: {len(self.imgpoints)} 组")
+        for i, (obj, img) in enumerate(zip(self.objpoints, self.imgpoints)):
+            print(f"[DEBUG]   - 第{i+1}组: 3D点 {obj.shape}, 2D点 {img.shape}")
         
         # 执行标定
         try:
             if model == "pinhole":
+                print(f"[DEBUG] 使用针孔模型进行标定")
                 # 针孔模型：k1,k2,p1,p2,k3
                 K = np.eye(3, dtype=np.float64)
                 D = np.zeros((5, 1), dtype=np.float64)
                 flags = 0
                 crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, 1e-7)
-
+                
+                print(f"[DEBUG] 准备针孔模型标定数据...")
                 # 处理对象点和图像点以符合 calibrateCamera 函数的要求
                 objp2 = []
                 imgp2 = []
-                for o, i in zip(self.objpoints, self.imgpoints):
+                for idx, (o, i) in enumerate(zip(self.objpoints, self.imgpoints)):
+                    print(f"[DEBUG] 处理第 {idx+1} 组点对: obj shape={o.shape}, img shape={i.shape}")
                     # pinhole calibrateCamera 接受 obj (N,3) 或 (N,1,3)，这里统一成 (N,3)
                     if o.ndim == 3:
                         objp2.append(o.reshape(-1, 3).astype(np.float32))
@@ -321,17 +393,30 @@ class CameraCalibrator:
                         imgp2.append(i.reshape(-1, 1, 2).astype(np.float32))
                     else:
                         imgp2.append(i.astype(np.float32))
-
+                
+                print(f"[DEBUG] 针孔标定数据准备完成:")
+                print(f"[DEBUG]   - objp2 包含 {len(objp2)} 组数据")
+                print(f"[DEBUG]   - imgp2 包含 {len(imgp2)} 组数据")
+                for idx, (o, i) in enumerate(zip(objp2, imgp2)):
+                    print(f"[DEBUG]   - 第{idx+1}组: obj {o.shape}, img {i.shape}")
+                
+                print(f"[DEBUG] 开始调用cv2.calibrateCamera，图像尺寸: {image_size}")
                 ret, K, D, rvecs, tvecs = cv2.calibrateCamera(
                     objp2, imgp2, image_size, K, D, flags=flags, criteria=crit
                 )
+                print(f"[DEBUG] cv2.calibrateCamera 返回值: ret={ret}, K.shape={K.shape}, D.shape={D.shape}")
+                print(f"[DEBUG] 旋转向量数量: {len(rvecs)}, 平移向量数量: {len(tvecs)}")
+                
                 mean_err = self._reprojection_error_pinhole(objp2, imgp2, rvecs, tvecs, K, D)
+                print(f"[DEBUG] 针孔模型重投影误差: {mean_err:.4f} px")
             
             elif model == "fisheye":
+                print(f"[DEBUG] 使用鱼眼模型进行标定")
                 # 鱼眼模型：k1,k2,k3,k4
                 objp_f = []
                 imgp_f = []
-                for o, i in zip(self.objpoints, self.imgpoints):
+                for idx, (o, i) in enumerate(zip(self.objpoints, self.imgpoints)):
+                    print(f"[DEBUG] 处理第 {idx+1} 组鱼眼点对: obj shape={o.shape}, img shape={i.shape}")
                     if o.ndim == 2:
                         o = o.reshape(-1, 1, 3)
                     if i.ndim == 2:
@@ -339,19 +424,33 @@ class CameraCalibrator:
                     objp_f.append(o.astype(np.float64))
                     imgp_f.append(i.astype(np.float64))
 
+                print(f"[DEBUG] 鱼眼标定数据准备完成:")
+                print(f"[DEBUG]   - objp_f 包含 {len(objp_f)} 组数据")
+                print(f"[DEBUG]   - imgp_f 包含 {len(imgp_f)} 组数据")
+                for idx, (o, i) in enumerate(zip(objp_f, imgp_f)):
+                    print(f"[DEBUG]   - 第{idx+1}组: obj {o.shape}, img {i.shape}")
+                
                 K = np.eye(3, dtype=np.float64)
                 D = np.zeros((4, 1), dtype=np.float64)
                 flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
                 crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, 1e-7)
-
+                
+                print(f"[DEBUG] 开始调用cv2.fisheye.calibrate，图像尺寸: {image_size}")
                 ret, K, D, rvecs, tvecs = cv2.fisheye.calibrate(
                     objp_f, imgp_f, image_size, K, D, None, None, flags=flags, criteria=crit
                 )
+                print(f"[DEBUG] cv2.fisheye.calibrate 返回值: ret={ret}, K.shape={K.shape}, D.shape={D.shape}")
+                print(f"[DEBUG] 旋转向量数量: {len(rvecs)}, 平移向量数量: {len(tvecs)}")
+                
                 mean_err = self._reprojection_error_fisheye(objp_f, imgp_f, rvecs, tvecs, K, D)
+                print(f"[DEBUG] 鱼眼模型重投影误差: {mean_err:.4f} px")
             else:
                 raise ValueError("model 只能是 pinhole 或 fisheye")
             
             if ret and ret > 0:
+                print(f"[DEBUG] 标定完成，误差: {ret}")
+                print(f"[DEBUG] 内参矩阵K:\n{K}")
+                print(f"[DEBUG] 畸变系数D:\n{D.flatten()}")
                 self.camera_properties['calibration_matrix'] = K
                 self.camera_properties['distortion_coeffs'] = D
                 success_msg = f"{model}模型标定成功! 重投影误差: {mean_err:.4f} px. 内参矩阵和畸变系数已保存。"
@@ -362,48 +461,48 @@ class CameraCalibrator:
                 print(error_msg)
                 return error_msg
         except Exception as e:
+            import traceback
+            print(f"[ERROR] 标定失败: 发生异常 - {str(e)}")
+            print(f"[ERROR] 异常详细信息:\n{traceback.format_exc()}")
             error_msg = f"标定失败: 发生异常 - {str(e)}"
             print(error_msg)
             return error_msg
     
     def _reprojection_error_pinhole(self, objpoints, imgpoints, rvecs, tvecs, K, D):
         """计算针孔模型的重投影误差"""
+        print(f"[DEBUG] 开始计算针孔模型重投影误差，共有 {len(objpoints)} 组数据")
         total_err = 0.0
         total_pts = 0
         for i in range(len(objpoints)):
+            print(f"[DEBUG] 处理第 {i+1} 组数据: obj={objpoints[i].shape}, img={imgpoints[i].shape}")
             proj, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], K, D)
             proj = proj.reshape(-1, 2)
             pts = imgpoints[i].reshape(-1, 2)
             err = np.linalg.norm(proj - pts, axis=1).mean()
+            print(f"[DEBUG] 第 {i+1} 组数据误差: {err:.4f}")
             total_err += err * len(objpoints[i])
             total_pts += len(objpoints[i])
-        return float(total_err / max(total_pts, 1))
+        mean_error = float(total_err / max(total_pts, 1))
+        print(f"[DEBUG] 针孔模型总误差: {total_err}, 总点数: {total_pts}, 平均误差: {mean_error:.4f}")
+        return mean_error
     
     def _reprojection_error_fisheye(self, objpoints, imgpoints, rvecs, tvecs, K, D):
         """计算鱼眼模型的重投影误差"""
+        print(f"[DEBUG] 开始计算鱼眼模型重投影误差，共有 {len(objpoints)} 组数据")
         total_err = 0.0
         total_pts = 0
         for i in range(len(objpoints)):
+            print(f"[DEBUG] 处理第 {i+1} 组数据: obj={objpoints[i].shape}, img={imgpoints[i].shape}")
             proj, _ = cv2.fisheye.projectPoints(objpoints[i], rvecs[i], tvecs[i], K, D)
             proj = proj.reshape(-1, 2)
             pts = imgpoints[i].reshape(-1, 2)
             err = np.linalg.norm(proj - pts, axis=1).mean()
+            print(f"[DEBUG] 第 {i+1} 组数据误差: {err:.4f}")
             total_err += err * len(objpoints[i])
             total_pts += len(objpoints[i])
-        return float(total_err / max(total_pts, 1))
-    
-    def _reprojection_error_pinhole(self, objpoints, imgpoints, rvecs, tvecs, K, D):
-        """计算针孔模型的重投影误差"""
-        total_err = 0.0
-        total_pts = 0
-        for i in range(len(objpoints)):
-            proj, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], K, D)
-            proj = proj.reshape(-1, 2)
-            pts = imgpoints[i].reshape(-1, 2)
-            err = np.linalg.norm(proj - pts, axis=1).mean()
-            total_err += err * len(objpoints[i])
-            total_pts += len(objpoints[i])
-        return float(total_err / max(total_pts, 1))
+        mean_error = float(total_err / max(total_pts, 1))
+        print(f"[DEBUG] 鱼眼模型总误差: {total_err}, 总点数: {total_pts}, 平均误差: {mean_error:.4f}")
+        return mean_error
     
     def generate_cpp_code(self):
         """生成C++代码 - 摄像头参数设置代码，包含畸变矫正参数"""
