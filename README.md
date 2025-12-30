@@ -18,14 +18,41 @@
 - OpenCV (包含aruco模块)
 - Flask
 - NumPy
+## 使用教程
 
-## 安装依赖
+### 准备工作
+- 准备标定板（打印Charuco_A4.pdf](Charuco_A4.pdf)文件，为A4纸尺寸）
+- 一颗摄像头
+- Python环境（推荐使用Miniconda或Anaconda，亦或者UV）
+### 安装软件及其环境
+
+这里以Anaconda为例（Miniconda和Anaconda步骤完全相同）
+
+- [Anaconda 下载](https://www.anaconda.com/download)
+- [Anaconda 安装指南](https://zhuanlan.zhihu.com/p/1896337220048228723)
+
+### 创建虚拟环境
+
+```bash
+conda create -n fixCam python=3.11
+```
+### 克隆仓库并进入目录
+国内镜像：
+```bash
+git clone https://gitee.com/Magnetokuwan/cam_distortion_correction.git
+cd cam_distortion_correction
+```
+或者Github：
+```bash
+git clone https://github.com/ouyangyanhuo/cam_distortion_correction
+cd cam_distortion_correction
+```
+
+### 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
-
-## 快速开始
 
 ### 启动应用
 
@@ -43,7 +70,7 @@ python app.py
 4. **捕获标定图像**：将标定板放置在不同角度和位置，点击"捕获标定图像"，建议至少捕获10张以上
 5. **执行标定**：点击"执行标定"完成摄像头标定
 6. **预览效果**：标定完成后可实时查看畸变校正效果
-7. **导出结果**：可生成C++代码或将标定结果保存为YAML文件
+7. **导出结果**：可生成C++代码
 
 ## 重构后的项目结构
 
