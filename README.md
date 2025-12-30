@@ -31,10 +31,11 @@
 - [Anaconda 下载](https://www.anaconda.com/download)
 - [Anaconda 安装指南](https://zhuanlan.zhihu.com/p/1896337220048228723)
 
-### 创建虚拟环境
+### 创建虚拟环境并进入
 
 ```bash
 conda create -n fixCam python=3.11
+conda activate fixCam
 ```
 ### 克隆仓库并进入目录
 国内镜像：
