@@ -239,6 +239,7 @@ class CameraCalibrator:
             if ret:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 
+                # 检测标定板角点
                 if self.board_type == "chessboard":
                     # 检测棋盘格角点
                     corners = self.detect_chessboard(gray, self.chessboard_size)
@@ -252,8 +253,38 @@ class CameraCalibrator:
                         # 绘制 ChArUco 角点
                         frame = cv2.aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids)
                 
-                # 转换为RGB格式用于Gradio显示
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # 如果已标定且存在标定矩阵和畸变系数，则应用畸变矫正
+                if (self.camera_properties['calibration_matrix'] is not None and 
+                    self.camera_properties['distortion_coeffs'] is not None):
+                    
+                    # 应用畸变矫正
+                    K = self.camera_properties['calibration_matrix']
+                    D = self.camera_properties['distortion_coeffs']
+                    
+                    try:
+                        # 确保畸变系数维度正确
+                        if D.shape != (4, 1) and D.shape != (5, 1):  # 针孔模型通常是(5,1)，鱼眼模型是(4,1)
+                            D = D.reshape(-1, 1)
+                        
+                        # 判断是针孔模型还是鱼眼模型（根据畸变系数数量）
+                        if D.shape[0] == 4:  # 鱼眼模型
+                            # 鱼眼模型矫正
+                            undistorted_frame = cv2.fisheye.undistortImage(frame, K, D, Knew=K)
+                        else:  # 针孔模型 (D.shape[0] == 5 或其他)
+                            # 针孔模型矫正
+                            new_camera_matrix, roi = cv2.getOptimalNewCameraMatrix(K, D, (frame.shape[1], frame.shape[0]), 1, (frame.shape[1], frame.shape[0]))
+                            undistorted_frame = cv2.undistort(frame, K, D, None, new_camera_matrix)
+                        
+                        # 返回矫正后的帧
+                        frame_rgb = cv2.cvtColor(undistorted_frame, cv2.COLOR_BGR2RGB)
+                    except Exception as e:
+                        print(f"[DEBUG] 畸变矫正失败: {e}")
+                        # 如果矫正失败，返回原始帧
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                else:
+                    # 如果没有标定数据，返回原始帧
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
                 return frame_rgb
             else:
                 # 如果无法读取帧，返回适当大小的黑色图像
@@ -453,6 +484,17 @@ class CameraCalibrator:
                 print(f"[DEBUG] 畸变系数D:\n{D.flatten()}")
                 self.camera_properties['calibration_matrix'] = K
                 self.camera_properties['distortion_coeffs'] = D
+                
+                # 更新前端畸变矫正参数，以便在C++代码生成和实时显示中使用
+                dist_coeffs = D.flatten()
+                self.k1 = float(dist_coeffs[0]) if len(dist_coeffs) > 0 else 0.0
+                self.k2 = float(dist_coeffs[1]) if len(dist_coeffs) > 1 else 0.0
+                self.p1 = float(dist_coeffs[2]) if len(dist_coeffs) > 2 else 0.0
+                self.p2 = float(dist_coeffs[3]) if len(dist_coeffs) > 3 else 0.0
+                self.k3 = float(dist_coeffs[4]) if len(dist_coeffs) > 4 else 0.0
+                
+                print(f"[DEBUG] 前端畸变参数已更新: k1={self.k1}, k2={self.k2}, p1={self.p1}, p2={self.p2}, k3={self.k3}")
+                
                 success_msg = f"{model}模型标定成功! 重投影误差: {mean_err:.4f} px. 内参矩阵和畸变系数已保存。"
                 print(success_msg)
                 return success_msg
