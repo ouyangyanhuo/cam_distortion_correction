@@ -254,7 +254,7 @@
             <div class="left-panel">
                 <div class="panel">
                     <div class="panel-title">标定板预览</div>
-                    <img id="charucoBoard" class="charuco-board" src="/api/charuco_board" alt="ChArUco标定板">
+                    <img id="charucoBoard" class="charuco-board" src="/api/board_image" alt="标定板">
                     <div>
                         <strong>标定板参数:</strong><br>
                         - 纸张: A4 (210 × 297 mm)<br>
@@ -434,7 +434,7 @@
         document.getElementById('startCameraBtn').addEventListener('click', function() {
             const cameraIndex = document.getElementById('cameraSelect').value;
             if (!cameraIndex) {
-                updateStatus('❌ 请先选择摄像头');
+                updateStatus('请先选择摄像头');
                 return;
             }
             
@@ -451,15 +451,15 @@
             .then(data => {
                 const message = data.message;
                 if (message.includes('started successfully')) {
-                    updateStatus('✅ ' + message);
+                    updateStatus(message);
                 } else if (message.includes('Failed')) {
-                    updateStatus('❌ ' + message);
+                    updateStatus(message);
                 } else {
                     updateStatus(message);
                 }
             })
             .catch(error => {
-                updateStatus('❌ 启动摄像头失败: ' + error);
+                updateStatus('启动摄像头失败: ' + error);
             });
         });
 
@@ -490,13 +490,13 @@
             .then(data => {
                 const message = data.message;
                 if (message.includes('updated')) {
-                    updateStatus('✅ ' + message);
+                    updateStatus( message);
                 } else {
                     updateStatus(message);
                 }
             })
             .catch(error => {
-                updateStatus('❌ 更新参数失败: ' + error);
+                updateStatus('更新参数失败: ' + error);
             });
         });
 
@@ -527,13 +527,13 @@
             .then(data => {
                 const message = data.message;
                 if (message.includes('updated')) {
-                    updateStatus('✅ ' + message);
+                    updateStatus(message);
                 } else {
                     updateStatus(message);
                 }
             })
             .catch(error => {
-                updateStatus('❌ 更新畸变参数失败: ' + error);
+                updateStatus('更新畸变参数失败: ' + error);
             });
         });
 
@@ -549,15 +549,15 @@
             .then(data => {
                 const message = data.message;
                 if (message.includes('Captured') || message.includes('Total')) {
-                    updateStatus('✅ ' + message);
+                    updateStatus(message);
                 } else if (message.includes('无法检测') || message.includes('Failed')) {
-                    updateStatus('❌ ' + message);
+                    updateStatus(message);
                 } else {
                     updateStatus(message);
                 }
             })
             .catch(error => {
-                updateStatus('❌ 捕获图像失败: ' + error);
+                updateStatus('捕获图像失败: ' + error);
             });
         });
 
@@ -577,15 +577,15 @@
                 // 检查标定结果并显示相应的状态信息
                 const message = data.message;
                 if (message.includes('成功')) {
-                    updateStatus('✅ ' + message);
+                    updateStatus(message);
                 } else if (message.includes('失败') || message.includes('error') || message.includes('Error')) {
-                    updateStatus('❌ ' + message);
+                    updateStatus(message);
                 } else {
                     updateStatus(message);
                 }
             })
             .catch(error => {
-                updateStatus('❌ 标定失败: ' + error);
+                updateStatus('标定失败: ' + error);
             });
         });
 
@@ -598,10 +598,10 @@
             .then(data => {
                 document.getElementById('cppCode').textContent = data.cpp_code;
                 document.getElementById('cppCode').style.display = 'block';
-                updateStatus('✅ C++代码已生成');
+                updateStatus('C++代码已生成');
             })
             .catch(error => {
-                updateStatus('❌ 生成C++代码失败: ' + error);
+                updateStatus('生成C++代码失败: ' + error);
             });
         });
 

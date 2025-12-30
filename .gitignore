@@ -150,3 +150,4 @@ desktop.ini
 # Output directories for calibration results
 output/
 calibration_results/
+AI_Rule.md
