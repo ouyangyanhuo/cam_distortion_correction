@@ -97,10 +97,29 @@ def calibrate():
     """执行标定"""
     try:
         print(f"[DEBUG API] 接收到标定请求")
-        data = request.get_json()
+        print(f"[DEBUG API] 请求内容类型: {request.content_type}")
+        print(f"[DEBUG API] 请求数据: {request.get_data()}")
+        
+        # 尝试获取JSON数据，如果失败则使用更安全的方法
+        try:
+            data = request.get_json()
+        except Exception as json_error:
+            print(f"[ERROR API] JSON解析异常: {json_error}")
+            data = None
+        
         if data is None:
-            print(f"[ERROR API] 无法解析JSON数据")
-            return jsonify({'status': 'error', 'message': '无法解析JSON数据'}), 400
+            # 尝试从请求体中获取原始数据并解析
+            try:
+                raw_data = request.get_data(as_text=True)
+                if raw_data:
+                    import json
+                    data = json.loads(raw_data)
+                else:
+                    data = {}
+            except Exception as e:
+                print(f"[ERROR API] 无法解析请求数据: {e}")
+                data = {'model': 'pinhole'}  # 使用默认值
+        
         model = data.get('model', 'pinhole')  # 默认使用pinhole模型
         print(f"[DEBUG API] 使用模型: {model}")
         result = calibrator.calibrate_camera(model=model)
@@ -158,10 +177,29 @@ def save_calibration():
     """保存标定结果"""
     try:
         print(f"[DEBUG API] 接收到保存标定结果请求")
-        data = request.get_json()
+        print(f"[DEBUG API] 请求内容类型: {request.content_type}")
+        print(f"[DEBUG API] 请求数据: {request.get_data()}")
+        
+        # 尝试获取JSON数据，如果失败则使用更安全的方法
+        try:
+            data = request.get_json()
+        except Exception as json_error:
+            print(f"[ERROR API] JSON解析异常: {json_error}")
+            data = None
+        
         if data is None:
-            print(f"[ERROR API] 无法解析JSON数据")
-            return jsonify({'status': 'error', 'message': '无法解析JSON数据'}), 400
+            # 尝试从请求体中获取原始数据并解析
+            try:
+                raw_data = request.get_data(as_text=True)
+                if raw_data:
+                    import json
+                    data = json.loads(raw_data)
+                else:
+                    data = {}
+            except Exception as e:
+                print(f"[ERROR API] 无法解析请求数据: {e}")
+                data = {'out_path': 'calibration.yaml', 'model': 'pinhole'}  # 使用默认值
+        
         out_path = data.get('out_path', 'calibration.yaml')
         model = data.get('model', 'pinhole')
         print(f"[DEBUG API] 保存路径: {out_path}, 模型: {model}")

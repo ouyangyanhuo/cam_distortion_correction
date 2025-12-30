@@ -210,8 +210,10 @@ def create_ui():
             import json
             # 使用Flask API进行标定，支持模型选择
             try:
+                headers = {'Content-Type': 'application/json'}
                 response = requests.post('http://127.0.0.1:5000/api/calibrate', 
                                         json={'model': model}, 
+                                        headers=headers,
                                         timeout=30)
                 
                 # 检查响应状态码
