@@ -45,19 +45,46 @@ python app.py
 6. **预览效果**：标定完成后可实时查看畸变校正效果
 7. **导出结果**：可生成C++代码或将标定结果保存为YAML文件
 
-## 项目结构
+## 重构后的项目结构
 
 ```
 fixCam/
 ├── app.py              # Flask主程序入口，提供Web API和界面
-├── calibrator.py       # 摄像头标定核心类，包含标定板检测、参数调整等功能
-├── templates/          # Flask模板目录
-│   └── index.html     # Web界面
 ├── requirements.txt    # 依赖库列表
 ├── Charuco_A4.pdf     # A4纸张ChArUco标定板
 ├── .gitignore         # Git忽略配置
-└── README.md          # 说明文档
+├── README.md          # 说明文档
+├── src/               # 重构后的源代码模块
+│   ├── __init__.py    # 模块初始化文件
+│   ├── main_calibrator.py  # 重构后的主标定器类
+│   ├── camera.py      # 摄像头管理模块
+│   ├── board.py       # 标定板管理模块
+│   ├── calibration.py # 标定核心算法模块
+│   ├── detection.py   # 角点检测算法模块
+│   └── utils.py       # 工具函数模块
+└── templates/         # Flask模板目录
+    └── index.html     # Web界面
 ```
+
+## 模块说明
+
+### src/main_calibrator.py
+重构后的主标定器类，整合了各个功能模块，提供统一的接口。
+
+### src/camera.py
+摄像头管理模块，包含摄像头初始化、参数调整、视频流处理等功能。
+
+### src/board.py
+标定板管理模块，处理棋盘格和ChArUco标定板的生成和角点检测。
+
+### src/calibration.py
+标定核心算法模块，实现针孔和鱼眼相机模型的标定算法。
+
+### src/detection.py
+角点检测算法模块，包含棋盘格和ChArUco角点检测算法。
+
+### src/utils.py
+通用工具函数模块，包含文件保存、误差计算等辅助函数。
 
 ## 技术细节
 
@@ -80,7 +107,7 @@ fixCam/
 
 ## 开发说明
 
-本项目提供了完整的摄像头标定解决方案，从前端界面到后端算法。核心标定功能在 [calibrator.py](calibrator.py) 中实现，Flask应用提供Web界面和API接口。
+本项目已重构为模块化结构，从前端界面到后端算法。核心标定功能在 `src/` 目录下的各个模块中实现，Flask应用提供Web界面和API接口。
 
 ## 注意事项
 
