@@ -2,7 +2,6 @@ from flask import Flask, render_template, Response, jsonify, request
 import cv2
 import numpy as np
 from calibrator import CameraCalibrator
-import json
 import threading
 
 app = Flask(__name__)
