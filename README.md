@@ -1,9 +1,10 @@
-# 摄像头标定和参数调整工具
+# 摄像头标定和参数调整工具 - 黑金主题版
 
-这是一个基于WebUI的摄像头标定和参数调整工具，用于摄像头畸变校正和参数优化。项目使用Python + Flask作为后端，WebUI作为前端界面。
+这是一个基于WebUI的摄像头标定和参数调整工具，用于摄像头畸变校正和参数优化。项目使用Python + Flask作为后端，WebUI作为前端界面。前端采用现代化的黑金配色主题，界面美观且专业。
+
 ## 效果展示
-![预览](static/img/1.png)
-![预览](static/img/2.png)
+![黑金主题预览](frontend/static/img/1.png)
+![界面预览](frontend/static/img/2.png)
 
 ## 功能特性
 
@@ -14,6 +15,7 @@
 - **畸变校正**：支持针孔模型和鱼眼模型的摄像头标定
 - **参数可视化**：实时应用畸变校正参数预览效果
 - **标定结果导出**：生成C++代码，支持标定结果保存为YAML文件
+- **现代化UI**：采用黑金配色主题，界面美观专业
 
 ## 系统要求
 
@@ -21,12 +23,14 @@
 - OpenCV (包含aruco模块)
 - Flask
 - NumPy
+
 ## 使用教程
 
 ### 准备工作
-- 准备标定板（打印Charuco_A4.pdf](Charuco_A4.pdf)文件，为A4纸尺寸）
+- 准备标定板（打印[Charuco_A4.pdf](Charuco_A4.pdf)文件，为A4纸尺寸）
 - 一颗摄像头
 - Python环境（推荐使用Miniconda或Anaconda，亦或者UV）
+
 ### 安装软件及其环境
 
 这里以Anaconda为例（Miniconda和Anaconda步骤完全相同）
@@ -40,6 +44,7 @@
 conda create -n fixCam python=3.11
 conda activate fixCam
 ```
+
 ### 克隆仓库并进入目录
 国内镜像：
 ```bash
@@ -76,46 +81,50 @@ python app.py
 6. **预览效果**：标定完成后可实时查看畸变校正效果
 7. **导出结果**：可生成C++代码
 
-## 重构后的项目结构
+## 项目结构
 
 ```
 fixCam/
-├── app.py              # Flask主程序入口，提供Web API和界面
-├── requirements.txt    # 依赖库列表
-├── Charuco_A4.pdf     # A4纸张ChArUco标定板
-├── .gitignore         # Git忽略配置
-├── README.md          # 说明文档
-├── src/               # 重构后的源代码模块
-│   ├── __init__.py    # 模块初始化文件
-│   ├── main_calibrator.py  # 重构后的主标定器类
-│   ├── camera.py      # 摄像头管理模块
-│   ├── board.py       # 标定板管理模块
-│   ├── calibration.py # 标定核心算法模块
-│   ├── detection.py   # 角点检测算法模块
-│   └── utils.py       # 工具函数模块
-└── templates/         # Flask模板目录
-    └── index.html     # Web界面
+├── app.py                      # Flask主程序入口，提供Web API
+├── requirements.txt            # 依赖库列表
+├── Charuco_A4.pdf             # A4纸张ChArUco标定板
+├── .gitignore                 # Git忽略配置
+├── README.md                  # 说明文档
+├── backend/                   # 后端模块
+│   ├── __init__.py
+│   ├── camera.py              # 摄像头管理模块
+│   ├── board.py               # 标定板管理模块
+│   └── calibration.py         # 标定核心算法模块
+├── frontend/                  # 前端文件
+│   ├── index.html             # Web界面
+│   └── static/
+│       ├── css/style.css      # 黑金主题样式
+│       └── js/main.js         # 前端逻辑
+└── PROJECT_STRUCTURE.md       # 项目结构文档
 ```
 
 ## 模块说明
 
-### src/main_calibrator.py
-重构后的主标定器类，整合了各个功能模块，提供统一的接口。
-
-### src/camera.py
+### backend/camera.py
 摄像头管理模块，包含摄像头初始化、参数调整、视频流处理等功能。
 
-### src/board.py
+### backend/board.py
 标定板管理模块，处理棋盘格和ChArUco标定板的生成和角点检测。
 
-### src/calibration.py
+### backend/calibration.py
 标定核心算法模块，实现针孔和鱼眼相机模型的标定算法。
 
-### src/detection.py
-角点检测算法模块，包含棋盘格和ChArUco角点检测算法。
+### frontend/index.html
+Web界面，采用现代化布局和黑金配色主题。
 
-### src/utils.py
-通用工具函数模块，包含文件保存、误差计算等辅助函数。
+### frontend/static/css/style.css
+前端样式文件，实现黑金主题设计。
+
+### frontend/static/js/main.js
+前端交互逻辑，与后端API通信。
+
+### app.py
+Flask应用主入口，提供API服务和静态文件服务。
 
 ## 技术细节
 
@@ -136,9 +145,16 @@ fixCam/
 - 畸变系数向量
 - 重投影误差（用于评估标定质量）
 
+## 黑金主题特色
+
+- **专业设计**：采用深色背景配合金色高亮，视觉效果专业高端
+- **现代化界面**：响应式设计，适配不同屏幕尺寸
+- **用户体验**：清晰的状态提示，直观的操作反馈
+- **夜间友好**：深色主题减少眼部疲劳，适合长时间使用
+
 ## 开发说明
 
-本项目已重构为模块化结构，从前端界面到后端算法。核心标定功能在 `src/` 目录下的各个模块中实现，Flask应用提供Web界面和API接口。
+本项目已重构为前后端分离架构，前端采用现代化黑金主题设计。核心标定功能在 [backend/](backend/) 目录下的各个模块中实现，Flask应用提供Web界面和API接口。
 
 ## 注意事项
 
@@ -147,3 +163,4 @@ fixCam/
 - 捕获标定图像时，应覆盖整个视野范围的不同位置和角度
 - 标定完成后，重投影误差越小表示标定质量越高（通常应小于1.0像素）
 - 不同的相机模型（针孔/鱼眼）会产生不同的标定结果，请根据实际摄像头类型选择
+- 黑金主题设计在暗光环境下使用效果更佳

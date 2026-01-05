@@ -1,93 +1,120 @@
-# Camera Calibration Tool - Separated Frontend & Backend
+# 摄像头标定工具 - 项目结构文档
 
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 fixCam/
-├── app.py                      # 🚀 Main entry point (run: python app.py)
-├── requirements.txt            # Python dependencies
+├── app.py                      # 🚀 Flask主程序入口，提供Web API
+├── requirements.txt            # Python依赖库
 │
-├── backend/                    # 🔧 Backend modules
+├── backend/                    # 🔧 后端模块
 │   ├── __init__.py
-│   ├── camera.py              # Camera management
-│   ├── board.py               # Calibration board logic
-│   └── calibration.py         # Calibration algorithms
+│   ├── camera.py              # 摄像头管理
+│   ├── board.py               # 标定板逻辑
+│   └── calibration.py         # 标定算法
 │
-├── frontend/                   # 🎨 Frontend files
-│   ├── static/                # CSS, JavaScript, Images
-│   │   ├── css/style.css
-│   │   ├── js/main.js
-│   │   └── img/
-│   └── templates/             # HTML templates
-│       └── index.html
+├── frontend/                   # 🎨 前端文件
+│   ├── index.html             # 主界面 (黑金主题)
+│   └── static/
+│       ├── css/style.css      # 黑金主题样式
+│       └── js/main.js         # 客户端逻辑
 │
-├── Charuco_A4.pdf             # Calibration board for printing
-├── README.md
-└── AI_Rule.md
+├── Charuco_A4.pdf             # 标定板打印文件
+├── README.md                  # 项目说明文档
+└── PROJECT_STRUCTURE.md       # 项目结构文档
 ```
 
-## 🚀 How to Run
+## 🚀 如何运行
 
-### 1. Install Dependencies
+### 1. 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Start the Server (from root directory)
+### 2. 启动服务器 (从根目录)
 ```bash
 python app.py
 ```
 
-### 3. Open Browser
+### 3. 打开浏览器
 ```
 http://127.0.0.1:5000
 ```
 
-## 📦 Architecture
+## 📦 架构设计
 
-### Backend (`backend/`)
-- **camera.py**: Camera discovery, parameter control, frame capture
-- **board.py**: ChArUco & Chessboard detection and generation
-- **calibration.py**: Pinhole & Fisheye calibration, YAML/C++ export
+### 后端 (`backend/`)
+- **camera.py**: 摄像头发现、参数控制、帧捕获
+- **board.py**: ChArUco & 棋盘格检测和生成
+- **calibration.py**: 针孔 & 鱼眼标定，YAML/C++导出
 
-### Frontend (`frontend/`)
-- **templates/index.html**: Main UI layout
-- **static/css/style.css**: Styling
-- **static/js/main.js**: Client-side logic and API calls
+### 前端 (`frontend/`)
+- **index.html**: 主UI布局 (黑金主题)
+- **static/css/style.css**: 黑金主题样式设计
+- **static/js/main.js**: 客户端逻辑和API调用
 
-### Entry Point (`app.py`)
-- Flask application with API routes
-- Serves frontend from `frontend/` folder
-- Imports backend modules from `backend/` folder
+### 入口点 (`app.py`)
+- Flask应用，提供API路由
+- 服务前端静态文件
+- 从`backend/`导入后端模块
 
-## 🔌 API Endpoints
+## 🔌 API 端点
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Main page |
-| GET | `/video_feed` | MJPEG video stream |
-| GET | `/api/cameras` | List available cameras |
-| POST | `/api/start_camera` | Start selected camera |
-| POST | `/api/update_params` | Update camera parameters |
-| POST | `/api/set_board_type` | Set calibration board type |
-| GET | `/api/board_image` | Get board preview image |
-| POST | `/api/capture_image` | Capture calibration image |
-| POST | `/api/calibrate` | Execute calibration |
-| POST | `/api/save_calibration` | Save to YAML |
-| GET | `/api/generate_cpp` | Generate C++ code |
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/` | 主页面 |
+| GET | `/video_feed` | MJPEG视频流 |
+| GET | `/api/cameras` | 获取可用摄像头列表 |
+| POST | `/api/start_camera` | 启动选定摄像头 |
+| POST | `/api/update_params` | 更新摄像头参数 |
+| POST | `/api/set_board_type` | 设置标定板类型 |
+| GET | `/api/board_image` | 获取标定板预览图像 |
+| POST | `/api/capture_image` | 捕获标定图像 |
+| POST | `/api/calibrate` | 执行标定 |
+| POST | `/api/save_calibration` | 保存到YAML |
+| GET | `/api/generate_cpp` | 生成C++代码 |
 
-## ✅ Benefits of This Structure
+## ✅ 项目优势
 
-1. **Separation of Concerns**: Frontend and backend clearly separated
-2. **Easy to Navigate**: Find files quickly
-3. **Simple Deployment**: Just run `python app.py` from root
-4. **Modular**: Easy to modify frontend or backend independently
-5. **Future-Ready**: Can easily migrate to separate servers if needed
+1. **前后端分离**: 前后端职责清晰分离
+2. **易于导航**: 快速找到相关文件
+3. **简单部署**: 从根目录运行`python app.py`
+4. **模块化**: 可独立修改前端或后端
+5. **现代化UI**: 采用黑金主题设计，界面美观专业
+6. **国际化**: 界面支持中文
 
-## 🎨 Next Steps
+## 🎨 黑金主题特色
 
-Ready for **Black & Gold UI redesign** in the `frontend/` folder!
+- **专业外观**: 深色背景配合金色高亮元素
+- **视觉舒适**: 减少长时间使用的眼部疲劳
+- **现代化设计**: 响应式布局，适配不同屏幕
+- **用户体验**: 清晰的状态反馈和操作提示
+
+## 📋 依赖项
+
+```
+opencv-python>=4.5.0
+opencv-contrib-python>=4.5.0
+numpy>=1.21.0
+Flask>=2.0.0
+Flask-CORS>=3.0.10
+```
+
+## 🛠️ 开发说明
+
+### 修改后端 API
+
+编辑 [app.py](app.py) 或 [backend/](backend/) 下的模块文件，重启 `python app.py`。
+
+### 修改前端界面
+
+编辑 [frontend/](frontend/) 下的文件：
+- [index.html](frontend/index.html) - 页面结构
+- [static/css/style.css](frontend/static/css/style.css) - 黑金主题样式
+- [static/js/main.js](frontend/static/js/main.js) - 逻辑
+
+刷新浏览器即可看到更改（无需重启后端）。
 
 ---
 
-**Status:** ✅ Frontend/Backend Separated and Working
+**状态**: ✅ 前后端分离架构，黑金主题设计，功能完整

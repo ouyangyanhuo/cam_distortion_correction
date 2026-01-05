@@ -128,9 +128,9 @@ function startCamera() {
     .then(response => response.json())
     .then(data => {
         const message = data.message;
-        if (message.includes('started successfully')) {
-            updateStatus(message, 'success');
-        } else if (message.includes('Failed')) {
+        if (message.includes('started successfully') || message.includes('成功')) {
+            updateStatus('摄像头启动成功', 'success');
+        } else if (message.includes('Failed') || message.includes('失败')) {
             updateStatus(message, 'danger');
         } else {
             updateStatus(message, 'info');
@@ -167,8 +167,8 @@ function updateCameraParams() {
     .then(response => response.json())
     .then(data => {
         const message = data.message;
-        if (message.includes('updated')) {
-            updateStatus(message, 'success');
+        if (message.includes('updated') || message.includes('成功')) {
+            updateStatus('摄像头参数更新成功', 'success');
         } else {
             updateStatus(message, 'info');
         }
@@ -204,8 +204,8 @@ function updateDistortionParams() {
     .then(response => response.json())
     .then(data => {
         const message = data.message;
-        if (message.includes('updated')) {
-            updateStatus(message, 'success');
+        if (message.includes('updated') || message.includes('成功')) {
+            updateStatus('畸变参数更新成功', 'success');
         } else {
             updateStatus(message, 'info');
         }
@@ -228,9 +228,9 @@ function captureImage() {
     .then(response => response.json())
     .then(data => {
         const message = data.message;
-        if (message.includes('Captured') || message.includes('Total')) {
+        if (message.includes('Captured') || message.includes('Total') || message.includes('成功') || message.includes('已捕获')) {
             updateStatus(message, 'success');
-        } else if (message.includes('无法检测') || message.includes('Failed')) {
+        } else if (message.includes('无法检测') || message.includes('Failed') || message.includes('失败') || message.includes('未检测到')) {
             updateStatus(message, 'warning');
         } else {
             updateStatus(message, 'info');
@@ -254,9 +254,9 @@ function calibrate() {
     .then(response => response.json())
     .then(data => {
         const message = data.message;
-        if (message.includes('成功')) {
+        if (message.includes('成功') || message.includes('completed')) {
             updateStatus(message, 'success');
-        } else if (message.includes('失败') || message.includes('error') || message.includes('Error')) {
+        } else if (message.includes('失败') || message.includes('error') || message.includes('Error') || message.includes('not enough')) {
             updateStatus(message, 'danger');
         } else {
             updateStatus(message, 'info');
