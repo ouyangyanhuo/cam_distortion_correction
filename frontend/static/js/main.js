@@ -27,12 +27,20 @@ function initializePage() {
         charucoBoard.style.display = 'none';
         charucoError.style.display = 'flex';
         charucoBoard.parentElement.classList.add('has-error');
+        // 检查是否是重连尝试
+        if (window.isRetrying) {
+            checkConnectionStatus();
+        }
     };
 
     charucoBoard.onload = function() {
         charucoBoard.style.display = 'block';
         charucoError.style.display = 'none';
         charucoBoard.parentElement.classList.remove('has-error');
+        // 检查是否是重连尝试
+        if (window.isRetrying) {
+            checkConnectionStatus();
+        }
     };
 
     // 设置视频流
@@ -43,12 +51,20 @@ function initializePage() {
         videoFeed.style.display = 'none';
         videoError.style.display = 'flex';
         videoFeed.parentElement.classList.add('has-error');
+        // 检查是否是重连尝试
+        if (window.isRetrying) {
+            checkConnectionStatus();
+        }
     };
 
     videoFeed.onload = function() {
         videoFeed.style.display = 'block';
         videoError.style.display = 'none';
         videoFeed.parentElement.classList.remove('has-error');
+        // 检查是否是重连尝试
+        if (window.isRetrying) {
+            checkConnectionStatus();
+        }
     };
 
     loadCameraList();
@@ -56,11 +72,38 @@ function initializePage() {
     setupAccordion();
 }
 
+// 检查连接状态
+function checkConnectionStatus() {
+    // 使用setTimeout确保所有图像加载事件都已触发
+    setTimeout(() => {
+        const charucoError = document.getElementById('charucoError');
+        const videoError = document.getElementById('videoError');
+
+        const charucoConnected = charucoError.style.display !== 'flex';
+        const videoConnected = videoError.style.display !== 'flex';
+
+        if (charucoConnected && videoConnected) {
+            updateStatus('后端连接成功！标定板和视频流已加载', 'success');
+        } else if (charucoConnected || videoConnected) {
+            updateStatus('部分连接成功：' +
+                (charucoConnected ? '标定板已加载' : '') +
+                (charucoConnected && !videoConnected ? '，但' : '') +
+                (!videoConnected ? '视频流连接失败（可能摄像头未启动）' : ''),
+                'warning');
+        } else {
+            updateStatus('连接失败：无法连接到后端服务器，请检查后端是否已启动', 'danger');
+        }
+
+        window.isRetrying = false;
+    }, 500);
+}
+
 // 重新加载图像（重连功能）
 function retryLoadImages() {
     const charucoBoard = document.getElementById('charucoBoard');
     const videoFeed = document.getElementById('videoFeed');
 
+    window.isRetrying = true;
     updateStatus('正在尝试重新连接后端...', 'info');
 
     // 重新加载标定板图像
@@ -91,11 +134,6 @@ function loadCameraList() {
                 option.textContent = `摄像头 ${camera}`;
                 select.appendChild(option);
             });
-            // 只在重连时显示成功消息
-            if (document.getElementById('charucoError').style.display === 'flex' ||
-                document.getElementById('videoError').style.display === 'flex') {
-                updateStatus('后端连接成功', 'success');
-            }
         })
         .catch(error => {
             console.error('获取摄像头列表失败:', error);
