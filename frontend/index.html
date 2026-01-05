@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>摄像头标定和参数调整工具</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
     <div class="container">
@@ -12,12 +12,12 @@
             <h1>摄像头标定和参数调整工具</h1>
             <p>加载本地的Charuco_A4.pdf文件，选择摄像头，调整参数并生成C++代码</p>
         </div>
-        
+
         <div class="content">
             <div class="left-panel">
                 <div class="card">
                     <div class="card-header">标定板预览</div>
-                    <img id="charucoBoard" class="charuco-board" src="/api/board_image" alt="标定板">
+                    <img id="charucoBoard" class="charuco-board" src="" alt="标定板">
                     <div>
                         <strong>标定板参数:</strong><br>
                         - 纸张: A4 (210 × 297 mm)<br>
@@ -31,13 +31,13 @@
                 <button id="startCameraBtn" class="btn-primary">启动摄像头</button>
                 <button id="generateCppBtn" class="btn-success">生成C++代码</button>
             </div>
-            
+
             <div class="right-panel">
                 <div class="video-and-capture">
                     <div class="card">
                         <div class="card-header">摄像头画面</div>
                         <div class="video-container">
-                            <img id="videoFeed" src="/video_feed" alt="摄像头画面">
+                            <img id="videoFeed" src="" alt="摄像头画面">
                         </div>
                     </div>
 
@@ -50,7 +50,7 @@
                         <button id="calibrateBtn" class="btn-success">执行标定</button>
                     </div>
                 </div>
-                
+
                 <div class="accordion">
                     <div class="accordion-header">
                         畸变矫正参数 <span>▼</span>
@@ -61,34 +61,34 @@
                                 <label for="k1">k1 (径向畸变)</label>
                                 <input type="number" id="k1" value="0.0" step="0.0001">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="k2">k2 (径向畸变)</label>
                                 <input type="number" id="k2" value="0.0" step="0.0001">
                             </div>
                         </div>
-                        
+
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="p1">p1 (切向畸变)</label>
                                 <input type="number" id="p1" value="0.0" step="0.0001">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="p2">p2 (切向畸变)</label>
                                 <input type="number" id="p2" value="0.0" step="0.0001">
                             </div>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="k3">k3 (径向畸变)</label>
                             <input type="number" id="k3" value="0.0" step="0.0001">
                         </div>
-                        
+
                         <button id="updateDistortionBtn" class="btn-primary">更新畸变参数</button>
                     </div>
                 </div>
-                
+
                 <div class="accordion">
                     <div class="accordion-header">
                         摄像头参数 <span>▼</span>
@@ -100,7 +100,7 @@
                                 <option value="">加载中...</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="resolutionWidth">分辨率宽度</label>
@@ -115,34 +115,34 @@
                                 <input type="number" id="fps" value="30">
                             </div>
                         </div>
-                        
+
                         <div class="form-group">
                             <label>曝光模式</label>
                             <div class="exposure-mode-group">
                                 <input type="radio" id="exposureAuto" name="exposureMode" value="auto" class="exposure-mode-input" checked>
                                 <label for="exposureAuto" class="exposure-mode-btn active" id="autoBtnLabel">自动</label>
-                                
+
                                 <input type="radio" id="exposureManual" name="exposureMode" value="manual" class="exposure-mode-input">
                                 <label for="exposureManual" class="exposure-mode-btn" id="manualBtnLabel">手动</label>
                             </div>
                         </div>
-                        
+
                         <div class="form-group exposure-input">
                             <label for="exposureValue">曝光值 (手动模式)</label>
                             <input type="number" id="exposureValue" value="-6" step="0.1">
                         </div>
-                        
+
                         <div class="btn-group">
                             <button id="updateParamsBtn" class="btn-warning">更新参数</button>
                         </div>
                     </div>
                 </div>
-                
+
                 <div id="cppCode" class="code-output"></div>
             </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="static/js/main.js"></script>
 </body>
 </html>

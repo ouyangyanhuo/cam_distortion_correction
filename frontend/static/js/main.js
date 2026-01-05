@@ -1,4 +1,11 @@
+// ===========================================
+// API Configuration
+// ===========================================
+const API_BASE_URL = 'http://127.0.0.1:5000';
+
+// ===========================================
 // 摄像头标定和参数调整工具的前端逻辑
+// ===========================================
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -6,6 +13,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializePage() {
+    // 设置图片源
+    document.getElementById('charucoBoard').src = `${API_BASE_URL}/api/board_image`;
+    document.getElementById('videoFeed').src = `${API_BASE_URL}/video_feed`;
+
     loadCameraList();
     setupEventListeners();
     setupAccordion();
@@ -13,7 +24,7 @@ function initializePage() {
 
 // 获取摄像头列表
 function loadCameraList() {
-    fetch('/api/cameras')
+    fetch(`${API_BASE_URL}/api/cameras`)
         .then(response => response.json())
         .then(data => {
             const select = document.getElementById('cameraSelect');
@@ -34,13 +45,13 @@ function setupEventListeners() {
     const exposureRadios = document.querySelectorAll('input[name="exposureMode"]');
     const exposureLabels = document.querySelectorAll('.exposure-mode-btn');
     const exposureInput = document.querySelector('.exposure-input');
-    
+
     exposureRadios.forEach((radio, index) => {
         radio.addEventListener('change', function() {
             // 更新按钮的激活状态
             exposureLabels.forEach(label => label.classList.remove('active'));
             exposureLabels[index].classList.add('active');
-            
+
             if (this.value === 'manual') {
                 exposureInput.style.display = 'block';
             } else {
@@ -48,17 +59,17 @@ function setupEventListeners() {
             }
         });
     });
-    
+
     // 为标签添加点击事件，以便用户可以点击标签切换选项
     exposureLabels.forEach((label, index) => {
         label.addEventListener('click', function() {
             // 触发对应的单选按钮
             exposureRadios[index].checked = true;
-            
+
             // 更新按钮的激活状态
             exposureLabels.forEach(lbl => lbl.classList.remove('active'));
             label.classList.add('active');
-            
+
             if (exposureRadios[index].value === 'manual') {
                 exposureInput.style.display = 'block';
             } else {
@@ -104,10 +115,10 @@ function startCamera() {
         updateStatus('请先选择摄像头', 'danger');
         return;
     }
-    
+
     updateStatus('正在启动摄像头...', 'info');
-    
-    fetch('/api/start_camera', {
+
+    fetch(`${API_BASE_URL}/api/start_camera`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -137,10 +148,10 @@ function updateCameraParams() {
     const fps = document.getElementById('fps').value;
     const exposureMode = document.querySelector('input[name="exposureMode"]:checked').value;
     const exposureValue = document.getElementById('exposureValue').value;
-    
+
     updateStatus('正在更新摄像头参数...', 'info');
-    
-    fetch('/api/update_params', {
+
+    fetch(`${API_BASE_URL}/api/update_params`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -174,10 +185,10 @@ function updateDistortionParams() {
     const p1 = document.getElementById('p1').value;
     const p2 = document.getElementById('p2').value;
     const k3 = document.getElementById('k3').value;
-    
+
     updateStatus('正在更新畸变参数...', 'info');
-    
-    fetch('/api/update_distortion', {
+
+    fetch(`${API_BASE_URL}/api/update_distortion`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -207,8 +218,8 @@ function updateDistortionParams() {
 // 捕获标定图像
 function captureImage() {
     updateStatus('正在捕获标定图像...', 'info');
-    
-    fetch('/api/capture_image', {
+
+    fetch(`${API_BASE_URL}/api/capture_image`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -233,8 +244,8 @@ function captureImage() {
 // 执行标定
 function calibrate() {
     updateStatus('正在执行标定，请稍候...', 'info');
-    
-    fetch('/api/calibrate', {
+
+    fetch(`${API_BASE_URL}/api/calibrate`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -259,8 +270,8 @@ function calibrate() {
 // 生成C++代码
 function generateCppCode() {
     updateStatus('正在生成C++代码...', 'info');
-    
-    fetch('/api/generate_cpp')
+
+    fetch(`${API_BASE_URL}/api/generate_cpp`)
     .then(response => response.json())
     .then(data => {
         document.getElementById('cppCode').textContent = data.cpp_code;
@@ -276,85 +287,10 @@ function generateCppCode() {
 function updateStatus(message, type = 'info') {
     const statusElement = document.getElementById('status');
     statusElement.textContent = message;
-    
+
     // 移除之前的状态类
     statusElement.className = 'status';
-    
+
     // 添加新的状态类
     statusElement.classList.add(`status-${type}`);
-}
-
-// 添加工具函数
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// 帧率计算功能
-let frameCount = 0;
-let lastTime = performance.now();
-let currentFps = 0;
-
-function updateFps() {
-    frameCount++;
-    const now = performance.now();
-    const delta = now - lastTime;
-    
-    // 每秒更新一次FPS显示
-    if (delta >= 1000) {
-        currentFps = Math.round((frameCount * 1000) / delta);
-        frameCount = 0;
-        lastTime = now;
-        
-        // 更新页面上的FPS显示
-        const fpsElement = document.getElementById('fpsDisplay');
-        if (fpsElement) {
-            fpsElement.textContent = `当前帧率: ${currentFps} FPS`;
-        }
-    }
-}
-
-// 监视视频流以计算帧率
-function monitorVideoStream() {
-    const videoFeed = document.getElementById('videoFeed');
-    if (videoFeed) {
-        // 监听图像更新事件
-        const img = new Image();
-        const originalSrc = videoFeed.src;
-        
-        // 重写src属性以捕获图像加载事件
-        const imgObserver = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
-                    updateFps();
-                }
-            });
-        });
-        
-        imgObserver.observe(videoFeed, {
-            attributes: true,
-            attributeFilter: ['src']
-        });
-        
-        // 也可以通过定期检查图像的src变化来更新FPS
-        let lastSrc = videoFeed.src;
-        setInterval(() => {
-            if (videoFeed.src !== lastSrc) {
-                updateFps();
-                lastSrc = videoFeed.src;
-            }
-        }, 10); // 检查间隔
-    }
-}
-
-// 页面加载完成后启动监控
-if (document.getElementById('videoFeed')) {
-    monitorVideoStream();
 }

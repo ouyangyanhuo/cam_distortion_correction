@@ -1,260 +1,246 @@
-from flask import Flask, render_template, Response, jsonify, request
+"""Simple Flask Backend - API Only Server"""
+from flask import Flask, Response, jsonify, request
+from flask_cors import CORS
 import cv2
-import numpy as np
-from src.main_calibrator import CameraCalibrator
 import threading
-import logging
-import json
-import traceback
-from functools import wraps
+from backend.camera import CameraManager
+from backend.board import BoardManager
+from backend.calibration import CalibrationEngine
 
-# 配置日志
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
+# Create Flask app (API only, no templates)
 app = Flask(__name__)
 
-# 创建全局的摄像头校准器实例
-calibrator = CameraCalibrator()
+# Enable CORS for frontend to access API
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# 创建锁以确保线程安全
+# Global instances
+camera_mgr = CameraManager()
+board_mgr = BoardManager()
+calib_engine = CalibrationEngine()
 camera_lock = threading.Lock()
 
 
-def safe_get_json(request_obj, defaults=None):
-    """
-    安全地从请求中获取 JSON 数据
-
-    Args:
-        request_obj: Flask request 对象
-        defaults: 默认值字典
-
-    Returns:
-        解析后的数据字典，如果失败则返回 defaults
-    """
-    if defaults is None:
-        defaults = {}
-
-    try:
-        data = request_obj.get_json()
-        if data is not None:
-            return data
-    except Exception as e:
-        logger.warning(f"JSON 解析失败: {e}")
-
-    # 尝试解析原始数据
-    try:
-        raw_data = request_obj.get_data(as_text=True)
-        if raw_data:
-            return json.loads(raw_data)
-    except Exception as e:
-        logger.warning(f"原始数据解析失败: {e}")
-
-    return defaults
+def get_request_data():
+    """Safely get JSON data from request, handling empty bodies"""
+    if request.is_json and request.data:
+        return request.get_json() or {}
+    return {}
 
 
-def handle_api_errors(f):
-    """API 错误处理装饰器"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            error_msg = f"操作失败: {str(e)}"
-            logger.error(f"{f.__name__} 发生异常: {error_msg}")
-            logger.error(f"异常详情:\n{traceback.format_exc()}")
-            return jsonify({'status': 'error', 'message': error_msg}), 500
-    return decorated_function
-
-@app.route('/')
-def index():
-    """主页面"""
-    return render_template('index.html')
-
+# ============= Video Stream =============
 @app.route('/video_feed')
 def video_feed():
-    """视频流端点"""
-    return Response(gen_frames(), 
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    """Video stream endpoint"""
+    def generate():
+        while True:
+            try:
+                with camera_lock:
+                    frame = camera_mgr.get_frame(board_mgr)
 
-def gen_frames():
-    """生成视频帧"""
-    while True:
-        try:
-            with camera_lock:
-                frame = calibrator.get_camera_frame()
+                if frame is None:
+                    continue
 
-            if frame is None:
+                ret, buffer = cv2.imencode('.jpg', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+                if ret:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            except:
                 continue
 
-            # 将numpy数组转换为图像
-            ret, buffer = cv2.imencode('.jpg', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-            if ret:
-                frame_bytes = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-        except GeneratorExit:
-            logger.info("视频流已关闭")
-            break
-        except Exception as e:
-            logger.error(f"生成视频帧时发生错误: {e}")
-            continue
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
+# ============= Camera APIs =============
 @app.route('/api/cameras')
 def get_cameras():
-    """获取可用摄像头列表"""
-    cameras = calibrator.get_camera_list()
+    """Get available cameras"""
+    cameras = camera_mgr.discover_cameras()
     return jsonify(cameras)
 
+
 @app.route('/api/start_camera', methods=['POST'])
-@handle_api_errors
 def start_camera():
-    """启动摄像头"""
-    data = safe_get_json(request, {'camera_index': 'Camera 0'})
-    camera_index = data.get('camera_index', 'Camera 0')
+    """Start camera"""
+    try:
+        data = get_request_data()
+        camera_index = data.get('camera_index', 'Camera 0')
 
-    with camera_lock:
-        result = calibrator.start_camera(camera_index)
+        # Extract index number
+        if isinstance(camera_index, str) and ' ' in camera_index:
+            index = int(camera_index.split(' ')[1])
+        else:
+            index = int(camera_index)
 
-    logger.info(f"启动摄像头: {camera_index}")
-    return jsonify({'status': 'success', 'message': result})
+        with camera_lock:
+            message = camera_mgr.open_camera(index)
+
+        return jsonify({'status': 'success', 'message': message})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 @app.route('/api/update_params', methods=['POST'])
-@handle_api_errors
 def update_params():
-    """更新摄像头参数"""
-    data = safe_get_json(request)
-    resolution_width = data.get('resolution_width', 320)
-    resolution_height = data.get('resolution_height', 240)
-    fps = data.get('fps', 30)
-    exposure_mode = data.get('exposure_mode', 'auto')
-    exposure_value = data.get('exposure_value', -6)
+    """Update camera parameters"""
+    try:
+        data = get_request_data()
 
-    with camera_lock:
-        result = calibrator.update_camera_params(
-            resolution_width, resolution_height, fps, exposure_mode, exposure_value
-        )
+        with camera_lock:
+            message = camera_mgr.update_params(
+                width=data.get('resolution_width'),
+                height=data.get('resolution_height'),
+                fps=data.get('fps'),
+                exposure_mode=data.get('exposure_mode'),
+                exposure_value=data.get('exposure_value')
+            )
 
-    logger.info(f"更新摄像头参数: {resolution_width}x{resolution_height} @ {fps}fps")
-    return jsonify({'status': 'success', 'message': result})
+        return jsonify({'status': 'success', 'message': message})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route('/api/update_distortion', methods=['POST'])
-@handle_api_errors
-def update_distortion():
-    """更新畸变参数"""
-    data = safe_get_json(request)
-    k1 = data.get('k1', 0.0)
-    k2 = data.get('k2', 0.0)
-    p1 = data.get('p1', 0.0)
-    p2 = data.get('p2', 0.0)
-    k3 = data.get('k3', 0.0)
 
-    result = calibrator.update_distortion_params(k1, k2, p1, p2, k3)
-    logger.info(f"更新畸变参数: k1={k1}, k2={k2}, p1={p1}, p2={p2}, k3={k3}")
-    return jsonify({'status': 'success', 'message': result})
+# ============= Board APIs =============
+@app.route('/api/set_board_type', methods=['POST'])
+def set_board_type():
+    """Set calibration board type"""
+    try:
+        data = get_request_data()
+        board_type = data.get('board_type', 'charuco')
 
-@app.route('/api/capture_image', methods=['POST'])
-@handle_api_errors
-def capture_image():
-    """捕获标定图像"""
-    with camera_lock:
-        result = calibrator.capture_calibration_image()
+        kwargs = {}
+        if board_type == 'chessboard':
+            if 'chessboard_size' in data:
+                kwargs['chessboard_size'] = data['chessboard_size']
+            if 'square_size' in data:
+                kwargs['square_size'] = data['square_size']
+        else:
+            for key in ['squares_x', 'squares_y', 'square_len', 'marker_len', 'dict_name']:
+                if key in data:
+                    kwargs[key] = data[key]
 
-    logger.info(f"捕获标定图像: {result}")
-    return jsonify({'status': 'success', 'message': result})
+        message = board_mgr.set_board_type(board_type, **kwargs)
+        return jsonify({'status': 'success', 'message': message})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route('/api/calibrate', methods=['POST'])
-@handle_api_errors
-def calibrate():
-    """执行标定"""
-    data = safe_get_json(request, {'model': 'pinhole'})
-    model = data.get('model', 'pinhole')
-
-    logger.info(f"开始标定，使用模型: {model}")
-    result = calibrator.calibrate_camera(model=model)
-    logger.info(f"标定完成: {result}")
-
-    return jsonify({'status': 'success', 'message': result})
-
-@app.route('/api/generate_cpp', methods=['GET'])
-@handle_api_errors
-def generate_cpp():
-    """生成C++代码"""
-    cpp_code = calibrator.generate_cpp_code()
-    return jsonify({'status': 'success', 'cpp_code': cpp_code})
 
 @app.route('/api/board_image')
-@handle_api_errors
 def get_board_image():
-    """获取标定板图像"""
-    board_image = calibrator.get_board_image()
-    if board_image is None:
-        logger.error("无法生成标定板图像")
-        return jsonify({'status': 'error', 'message': '无法生成标定板图像'}), 404
+    """Get board image for display"""
+    try:
+        board_img = board_mgr.generate_image()
+        ret, buffer = cv2.imencode('.png', cv2.cvtColor(board_img, cv2.COLOR_RGB2BGR))
+        return Response(buffer.tobytes(), mimetype='image/png')
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 404
 
-    ret, buffer = cv2.imencode('.png', cv2.cvtColor(board_image, cv2.COLOR_RGB2BGR))
-    if not ret:
-        logger.error("无法编码标定板图像")
-        return jsonify({'status': 'error', 'message': '无法编码标定板图像'}), 500
 
-    return Response(buffer.tobytes(), mimetype='image/png')
+# ============= Calibration APIs =============
+@app.route('/api/capture_image', methods=['POST'])
+def capture_image():
+    """Capture calibration image"""
+    try:
+        with camera_lock:
+            frame = camera_mgr.capture_frame()
 
-@app.route('/api/set_board_type', methods=['POST'])
-@handle_api_errors
-def set_board_type():
-    """设置标定板类型"""
-    data = safe_get_json(request, {'board_type': 'charuco'})
-    board_type = data.get('board_type', 'charuco')
+        if frame is None:
+            return jsonify({'status': 'error', 'message': 'Failed to capture frame'}), 500
 
-    kwargs = {}
-    if board_type == 'chessboard':
-        kwargs['chessboard_size'] = tuple(data.get('chessboard_size', [9, 6]))
-        kwargs['square_size'] = data.get('square_size', 25.0)
+        success, message = calib_engine.add_image(frame, board_mgr)
 
-    result = calibrator.set_board_type(board_type, **kwargs)
-    logger.info(f"设置标定板类型: {board_type}, 参数: {kwargs}")
-    return jsonify({'status': 'success', 'message': result})
+        if not success:
+            return jsonify({'status': 'error', 'message': message}), 400
+
+        return jsonify({'status': 'success', 'message': message})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/calibrate', methods=['POST'])
+def calibrate():
+    """Execute calibration"""
+    try:
+        data = get_request_data()
+        model = data.get('model', 'pinhole')
+
+        success, message = calib_engine.calibrate(model)
+
+        if not success:
+            return jsonify({'status': 'error', 'message': message}), 400
+
+        # Update camera with calibration results
+        camera_mgr.camera_matrix = calib_engine.camera_matrix
+        camera_mgr.dist_coeffs = calib_engine.dist_coeffs
+
+        return jsonify({'status': 'success', 'message': message})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 @app.route('/api/save_calibration', methods=['POST'])
-@handle_api_errors
 def save_calibration():
-    """保存标定结果"""
-    data = safe_get_json(request, {'out_path': 'calibration.yaml', 'model': 'pinhole'})
-    out_path = data.get('out_path', 'calibration.yaml')
-    model = data.get('model', 'pinhole')
+    """Save calibration to YAML"""
+    try:
+        data = get_request_data()
+        filepath = data.get('out_path', 'calibration.yaml')
+        model = data.get('model', 'pinhole')
 
-    logger.info(f"保存标定结果: {out_path}, 模型: {model}")
-    result = calibrator.save_calibration(out_path, model)
-    logger.info(f"保存完成: {result}")
+        if calib_engine.camera_matrix is None:
+            return jsonify({'status': 'error', 'message': 'No calibration data'}), 400
 
-    return jsonify({'status': 'success', 'message': result})
+        calib_engine.save_yaml(filepath, model)
+        return jsonify({'status': 'success', 'message': f'Saved to {filepath}'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/generate_cpp', methods=['GET'])
+def generate_cpp():
+    """Generate C++ code"""
+    try:
+        if calib_engine.camera_matrix is None:
+            return jsonify({'status': 'error', 'message': 'No calibration data'}), 400
+
+        camera_params = {
+            'width': camera_mgr.width,
+            'height': camera_mgr.height,
+            'fps': camera_mgr.fps
+        }
+
+        cpp_code = calib_engine.generate_cpp(camera_params)
+        return jsonify({'status': 'success', 'cpp_code': cpp_code})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ============= Cleanup =============
 @app.teardown_appcontext
 def cleanup(error=None):
-    """应用上下文清理"""
+    """Cleanup resources"""
     if error:
-        logger.error(f"应用上下文错误: {error}")
+        print(f"Error: {error}")
 
 
 def shutdown_handler():
-    """关闭处理函数"""
-    logger.info("正在关闭应用...")
-    with camera_lock:
-        try:
-            if hasattr(calibrator, 'release_camera'):
-                calibrator.release_camera()
-                logger.info("摄像头资源已释放")
-        except Exception as e:
-            logger.error(f"释放摄像头资源时发生错误: {e}")
+    """Shutdown handler"""
+    camera_mgr.close()
 
 
 if __name__ == '__main__':
     import atexit
     atexit.register(shutdown_handler)
 
-    logger.info("启动 Flask 应用")
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    print("=" * 60)
+    print("摄像头标定工具 - 后端 API 服务器")
+    print("Camera Calibration Tool - Backend API Server")
+    print("=" * 60)
+    print("后端服务启动中...")
+    print("API 地址: http://127.0.0.1:5000")
+    print("请双击打开 frontend/index.html 使用前端界面")
+    print("-" * 60)
+    print("Starting backend API server...")
+    print("API URL: http://127.0.0.1:5000")
+    print("Please double-click frontend/index.html to open the UI")
+    print("=" * 60)
+
+    app.run(debug=True, host='127.0.0.1', port=5000, threaded=True)
