@@ -14,18 +14,74 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializePage() {
     // 设置图片源
-    document.getElementById('charucoBoard').src = `${API_BASE_URL}/api/board_image`;
-    document.getElementById('videoFeed').src = `${API_BASE_URL}/video_feed`;
+    const charucoBoard = document.getElementById('charucoBoard');
+    const videoFeed = document.getElementById('videoFeed');
+    const charucoError = document.getElementById('charucoError');
+    const videoError = document.getElementById('videoError');
+
+    // 设置标定板图像
+    charucoBoard.src = `${API_BASE_URL}/api/board_image`;
+
+    // 标定板图像错误处理
+    charucoBoard.onerror = function() {
+        charucoBoard.style.display = 'none';
+        charucoError.style.display = 'flex';
+        charucoBoard.parentElement.classList.add('has-error');
+    };
+
+    charucoBoard.onload = function() {
+        charucoBoard.style.display = 'block';
+        charucoError.style.display = 'none';
+        charucoBoard.parentElement.classList.remove('has-error');
+    };
+
+    // 设置视频流
+    videoFeed.src = `${API_BASE_URL}/video_feed`;
+
+    // 视频流错误处理
+    videoFeed.onerror = function() {
+        videoFeed.style.display = 'none';
+        videoError.style.display = 'flex';
+        videoFeed.parentElement.classList.add('has-error');
+    };
+
+    videoFeed.onload = function() {
+        videoFeed.style.display = 'block';
+        videoError.style.display = 'none';
+        videoFeed.parentElement.classList.remove('has-error');
+    };
 
     loadCameraList();
     setupEventListeners();
     setupAccordion();
 }
 
+// 重新加载图像（重连功能）
+function retryLoadImages() {
+    const charucoBoard = document.getElementById('charucoBoard');
+    const videoFeed = document.getElementById('videoFeed');
+
+    updateStatus('正在尝试重新连接后端...', 'info');
+
+    // 重新加载标定板图像
+    charucoBoard.src = `${API_BASE_URL}/api/board_image?t=${new Date().getTime()}`;
+
+    // 重新加载视频流
+    videoFeed.src = `${API_BASE_URL}/video_feed?t=${new Date().getTime()}`;
+
+    // 重新加载摄像头列表
+    loadCameraList();
+}
+
 // 获取摄像头列表
 function loadCameraList() {
     fetch(`${API_BASE_URL}/api/cameras`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('获取摄像头列表失败');
+            }
+            return response.json();
+        })
         .then(data => {
             const select = document.getElementById('cameraSelect');
             select.innerHTML = '';
@@ -35,8 +91,17 @@ function loadCameraList() {
                 option.textContent = `摄像头 ${camera}`;
                 select.appendChild(option);
             });
+            // 只在重连时显示成功消息
+            if (document.getElementById('charucoError').style.display === 'flex' ||
+                document.getElementById('videoError').style.display === 'flex') {
+                updateStatus('后端连接成功', 'success');
+            }
         })
-        .catch(error => console.error('获取摄像头列表失败:', error));
+        .catch(error => {
+            console.error('获取摄像头列表失败:', error);
+            const select = document.getElementById('cameraSelect');
+            select.innerHTML = '<option value="">无法连接到后端</option>';
+        });
 }
 
 // 设置事件监听器
@@ -125,19 +190,24 @@ function startCamera() {
         },
         body: JSON.stringify({ camera_index: cameraIndex })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || '启动摄像头失败');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         const message = data.message;
-        if (message.includes('started successfully') || message.includes('成功')) {
-            updateStatus('摄像头启动成功', 'success');
-        } else if (message.includes('Failed') || message.includes('失败')) {
-            updateStatus(message, 'danger');
+        if (message.includes('opened') || message.includes('成功')) {
+            updateStatus(message, 'success');
         } else {
             updateStatus(message, 'info');
         }
     })
     .catch(error => {
-        updateStatus('启动摄像头失败: ' + error, 'danger');
+        updateStatus('启动摄像头失败: ' + error.message, 'danger');
     });
 }
 
@@ -164,7 +234,14 @@ function updateCameraParams() {
             exposure_value: parseFloat(exposureValue)
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || '更新参数失败');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         const message = data.message;
         if (message.includes('updated') || message.includes('成功')) {
@@ -174,7 +251,7 @@ function updateCameraParams() {
         }
     })
     .catch(error => {
-        updateStatus('更新参数失败: ' + error, 'danger');
+        updateStatus('更新参数失败: ' + error.message, 'danger');
     });
 }
 
@@ -201,7 +278,14 @@ function updateDistortionParams() {
             k3: parseFloat(k3)
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || '更新畸变参数失败');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         const message = data.message;
         if (message.includes('updated') || message.includes('成功')) {
@@ -211,7 +295,7 @@ function updateDistortionParams() {
         }
     })
     .catch(error => {
-        updateStatus('更新畸变参数失败: ' + error, 'danger');
+        updateStatus('更新畸变参数失败: ' + error.message, 'danger');
     });
 }
 
@@ -225,19 +309,24 @@ function captureImage() {
             'Content-Type': 'application/json',
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || '捕获图像失败');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         const message = data.message;
-        if (message.includes('Captured') || message.includes('Total') || message.includes('成功') || message.includes('已捕获')) {
+        if (data.status === 'success' || message.includes('Captured') || message.includes('Total') || message.includes('成功') || message.includes('已捕获')) {
             updateStatus(message, 'success');
-        } else if (message.includes('无法检测') || message.includes('Failed') || message.includes('失败') || message.includes('未检测到')) {
-            updateStatus(message, 'warning');
         } else {
-            updateStatus(message, 'info');
+            updateStatus(message, 'warning');
         }
     })
     .catch(error => {
-        updateStatus('捕获图像失败: ' + error, 'danger');
+        updateStatus('捕获图像失败: ' + error.message, 'danger');
     });
 }
 
@@ -251,19 +340,24 @@ function calibrate() {
             'Content-Type': 'application/json',
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || '标定失败');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         const message = data.message;
-        if (message.includes('成功') || message.includes('completed')) {
+        if (data.status === 'success' || message.includes('成功') || message.includes('successful')) {
             updateStatus(message, 'success');
-        } else if (message.includes('失败') || message.includes('error') || message.includes('Error') || message.includes('not enough')) {
-            updateStatus(message, 'danger');
         } else {
-            updateStatus(message, 'info');
+            updateStatus(message, 'danger');
         }
     })
     .catch(error => {
-        updateStatus('标定失败: ' + error, 'danger');
+        updateStatus('标定失败: ' + error.message, 'danger');
     });
 }
 
@@ -272,14 +366,25 @@ function generateCppCode() {
     updateStatus('正在生成C++代码...', 'info');
 
     fetch(`${API_BASE_URL}/api/generate_cpp`)
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || '生成C++代码失败');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
-        document.getElementById('cppCode').textContent = data.cpp_code;
-        document.getElementById('cppCode').style.display = 'block';
-        updateStatus('C++代码已生成', 'success');
+        if (data.status === 'success' && data.cpp_code) {
+            document.getElementById('cppCode').textContent = data.cpp_code;
+            document.getElementById('cppCode').style.display = 'block';
+            updateStatus('C++代码已生成', 'success');
+        } else {
+            updateStatus(data.message || '生成C++代码失败', 'danger');
+        }
     })
     .catch(error => {
-        updateStatus('生成C++代码失败: ' + error, 'danger');
+        updateStatus('生成C++代码失败: ' + error.message, 'danger');
     });
 }
 

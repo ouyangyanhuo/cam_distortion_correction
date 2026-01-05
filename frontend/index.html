@@ -17,7 +17,15 @@
             <div class="left-panel">
                 <div class="card">
                     <div class="card-header">标定板预览</div>
-                    <img id="charucoBoard" class="charuco-board" src="" alt="标定板">
+                    <div class="image-wrapper">
+                        <img id="charucoBoard" class="charuco-board" src="" alt="标定板">
+                        <div id="charucoError" class="image-error-placeholder" style="display: none;">
+                            <div class="error-icon">⚠</div>
+                            <div class="error-text">无法连接到后端服务器</div>
+                            <div class="error-subtext">请确保后端服务已启动 (http://127.0.0.1:5000)</div>
+                            <button class="btn-warning retry-btn" onclick="retryLoadImages()">重新连接</button>
+                        </div>
+                    </div>
                     <div>
                         <strong>标定板参数:</strong><br>
                         - 纸张: A4 (210 × 297 mm)<br>
@@ -37,7 +45,15 @@
                     <div class="card">
                         <div class="card-header">摄像头画面</div>
                         <div class="video-container">
-                            <img id="videoFeed" src="" alt="摄像头画面">
+                            <div class="image-wrapper">
+                                <img id="videoFeed" src="" alt="摄像头画面">
+                                <div id="videoError" class="image-error-placeholder" style="display: none;">
+                                    <div class="error-icon">⚠</div>
+                                    <div class="error-text">无法连接到后端服务器</div>
+                                    <div class="error-subtext">请确保后端服务已启动 (http://127.0.0.1:5000)</div>
+                                    <button class="btn-warning retry-btn" onclick="retryLoadImages()">重新连接</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

@@ -99,6 +99,32 @@ def update_params():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/update_distortion', methods=['POST'])
+def update_distortion():
+    """Update distortion coefficients"""
+    try:
+        data = get_request_data()
+
+        # Get distortion coefficients
+        k1 = data.get('k1', 0.0)
+        k2 = data.get('k2', 0.0)
+        p1 = data.get('p1', 0.0)
+        p2 = data.get('p2', 0.0)
+        k3 = data.get('k3', 0.0)
+
+        # Update camera manager's distortion coefficients
+        import numpy as np
+        camera_mgr.dist_coeffs = np.array([[k1], [k2], [p1], [p2], [k3]], dtype=np.float64)
+
+        # Also update calibration engine if it has been calibrated
+        if calib_engine.camera_matrix is not None:
+            calib_engine.dist_coeffs = camera_mgr.dist_coeffs
+
+        return jsonify({'status': 'success', 'message': 'Distortion parameters updated'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 # ============= Board APIs =============
 @app.route('/api/set_board_type', methods=['POST'])
 def set_board_type():
