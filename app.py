@@ -3,9 +3,22 @@ from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 import cv2
 import threading
+import sys
+import os
 from backend.camera import CameraManager
 from backend.board import BoardManager
 from backend.calibration import CalibrationEngine
+
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 # Create Flask app (API only, no templates)
 app = Flask(__name__)
@@ -255,13 +268,12 @@ def shutdown_handler():
 if __name__ == '__main__':
     import atexit
     import webbrowser
-    import os
     from pathlib import Path
 
     atexit.register(shutdown_handler)
 
-    # Get absolute path to index.html
-    frontend_path = Path(__file__).parent / 'frontend' / 'index.html'
+    # Get absolute path to index.html (works both in dev and packaged exe)
+    frontend_path = Path(get_resource_path('frontend')) / 'index.html'
     frontend_url = frontend_path.resolve().as_uri()
 
     # Only print and open browser once (avoid duplicate in Flask reloader)

@@ -6,6 +6,9 @@
 fixCam/
 ├── app.py                      # 🚀 Flask主程序入口，提供Web API
 ├── requirements.txt            # Python依赖库
+├── BUILD.md                    # 📦 打包说明文档
+├── fixCam.spec                 # PyInstaller 配置文件
+├── build.bat                   # 一键打包脚本（Windows）
 │
 ├── backend/                    # 🔧 后端模块
 │   ├── __init__.py
@@ -85,6 +88,7 @@ python app.py
 5. **现代化UI**: 采用黑金主题设计，界面美观专业
 6. **国际化**: 界面支持中文
 7. **用户友好**: 启动后端时自动打开前端界面，无需手动操作
+8. **可打包**: 支持打包成独立exe文件，无需Python环境即可运行
 
 ## 🎨 黑金主题特色
 
@@ -118,6 +122,17 @@ Flask-CORS>=3.0.10
 
 刷新浏览器即可看到更改（无需重启后端）。
 
+### 打包成 exe 文件
+
+详见 [BUILD.md](BUILD.md) 文档。
+
+**快速打包**：
+```bash
+build.bat
+```
+
+打包后的可执行文件位于 `dist/CameraCalibration/CameraCalibration.exe`
+
 ---
 
-**状态**: ✅ 前后端分离架构，黑金主题设计，功能完整
+**状态**: ✅ 前后端分离架构，黑金主题设计，功能完整，支持打包

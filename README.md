@@ -28,7 +28,18 @@
 
 ## 使用教程
 
-### 准备工作
+### 方式一：直接使用打包好的 exe（推荐给普通用户）
+
+1. **下载发行版**：从 Releases 下载 `CameraCalibration.zip`
+2. **解压缩**：解压到任意文件夹
+3. **运行**：双击 `CameraCalibration.exe`
+4. **自动启动**：程序会自动打开浏览器显示界面
+
+无需安装 Python 或任何依赖！
+
+### 方式二：从源代码运行（推荐给开发者）
+
+#### 准备工作
 - 准备标定板（打印[Charuco_A4.pdf](Charuco_A4.pdf)文件，为A4纸尺寸）
 - 一颗摄像头
 - Python环境（推荐使用Miniconda或Anaconda，亦或者UV）
@@ -99,17 +110,20 @@ fixCam/
 ├── Charuco_A4.pdf             # A4纸张ChArUco标定板
 ├── .gitignore                 # Git忽略配置
 ├── README.md                  # 说明文档
+├── PROJECT_STRUCTURE.md       # 项目结构文档
+├── BUILD.md                   # 打包说明文档
+├── fixCam.spec                # PyInstaller 配置文件
+├── build.bat                  # 一键打包脚本（Windows）
 ├── backend/                   # 后端模块
 │   ├── __init__.py
 │   ├── camera.py              # 摄像头管理模块
 │   ├── board.py               # 标定板管理模块
 │   └── calibration.py         # 标定核心算法模块
-├── frontend/                  # 前端文件
-│   ├── index.html             # Web界面
-│   └── static/
-│       ├── css/style.css      # 黑金主题样式
-│       └── js/main.js         # 前端逻辑
-└── PROJECT_STRUCTURE.md       # 项目结构文档
+└── frontend/                  # 前端文件
+    ├── index.html             # Web界面
+    └── static/
+        ├── css/style.css      # 黑金主题样式
+        └── js/main.js         # 前端逻辑
 ```
 
 ## 模块说明
@@ -170,6 +184,22 @@ Flask应用主入口，提供API服务（纯后端，不服务静态文件）。
 - **启动方式**：运行 `python app.py` 启动后端，自动打开浏览器加载前端界面
 
 核心标定功能在 [backend/](backend/) 目录下的各个模块中实现。
+
+## 打包成 exe 文件
+
+如果你想将项目打包成独立的可执行文件，请参考 [BUILD.md](BUILD.md) 文档。
+
+### 快速打包
+
+```bash
+# 运行打包脚本
+build.bat
+
+# 打包完成后，可执行文件位于
+dist\CameraCalibration\CameraCalibration.exe
+```
+
+详细打包说明、常见问题和高级配置，请查看 **[BUILD.md](BUILD.md)**。
 
 ## 注意事项
 
