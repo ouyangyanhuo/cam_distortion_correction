@@ -254,19 +254,40 @@ def shutdown_handler():
 
 if __name__ == '__main__':
     import atexit
+    import webbrowser
+    import os
+    from pathlib import Path
+
     atexit.register(shutdown_handler)
 
-    print("=" * 60)
-    print("摄像头标定工具 - 后端 API 服务器")
-    print("Camera Calibration Tool - Backend API Server")
-    print("=" * 60)
-    print("后端服务启动中...")
-    print("API 地址: http://127.0.0.1:5000")
-    print("请双击打开 frontend/index.html 使用前端界面")
-    print("-" * 60)
-    print("Starting backend API server...")
-    print("API URL: http://127.0.0.1:5000")
-    print("Please double-click frontend/index.html to open the UI")
-    print("=" * 60)
+    # Get absolute path to index.html
+    frontend_path = Path(__file__).parent / 'frontend' / 'index.html'
+    frontend_url = frontend_path.resolve().as_uri()
+
+    # Only print and open browser once (avoid duplicate in Flask reloader)
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        print("=" * 60)
+        print("摄像头标定工具 - 后端 API 服务器")
+        print("Camera Calibration Tool - Backend API Server")
+        print("=" * 60)
+        print("后端服务启动中...")
+        print("API 地址: http://127.0.0.1:5000")
+        print(f"前端界面: {frontend_url}")
+        print("=" * 60)
+
+        # Auto-open browser
+        try:
+            print("\n正在打开浏览器...")
+            print("Opening browser...")
+            webbrowser.open(frontend_url)
+            print("浏览器已打开！如果没有自动打开，请复制上面的链接到浏览器中打开。")
+            print("Browser opened! If it didn't open automatically, copy the link above to your browser.")
+        except Exception as e:
+            print(f"无法自动打开浏览器: {e}")
+            print(f"Failed to open browser: {e}")
+            print("请手动复制上面的链接到浏览器中打开。")
+            print("Please manually copy the link above to your browser.")
+
+        print("=" * 60)
 
     app.run(debug=True, host='127.0.0.1', port=5000, threaded=True)
